@@ -3,39 +3,57 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:e2e": "playwright test --project=smoke",
+    "test:sandpack": "playwright test --project=sandpack",
+    "validate": "node scripts/validate-content.ts"
   },
   "dependencies": {
     "@codesandbox/sandpack-react": "^2.20.0",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router": "^8.5.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router": "8.5.0"
   },
   "devDependencies": {
+    "@hookform/resolvers": "5.9.2",
     "@mdx-js/rollup": "^3.1.1",
     "@playwright/test": "^1.64.1",
+    "@reduxjs/toolkit": "2.13.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
-    "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.8",
+    "@tanstack/react-query": "5.104.5",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/hast": "^3.0.5",
     "@types/mdx": "^2.0.14",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^29.1.1",
+    "msw": "3.0.3",
     "oxlint": "^1.89.0",
+    "react-hook-form": "7.90.0",
+    "react-redux": "9.3.0",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
-    "remark-mdx-frontmatter": "^6.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "yaml": "^2.9.1",
+    "zod": "4.6.7",
+    "zustand": "5.0.16"
   }
 }

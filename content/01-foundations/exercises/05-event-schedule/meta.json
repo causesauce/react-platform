@@ -1,0 +1,10 @@
+{
+  "title": "Build a schedule from the data up",
+  "difficulty": "medium",
+  "task": "Turn `sessions` into a conference schedule: one section per day, in the order the days first appear, headed by the day's name. Each day lists its sessions with the time and title, and \"with <speaker>\" when the session has a speaker. Breaks have no speaker.",
+  "hints": [
+    "Sketch the tree first. One reasonable split is `Schedule` → `DaySection` (one per day) → `SessionItem` (one per session).",
+    "Group before rendering. Loop over `sessions` and push each one into an array for its day, keeping days in first-seen order. A `Map<string, Session[]>` remembers insertion order for you.",
+    "Render the groups with `Array.from(byDay, ([day, daySessions]) => <DaySection key={day} … />)`. In `SessionItem`, show the speaker with `{session.speaker !== null && <span> with {session.speaker}</span>}`."
+  ]
+}

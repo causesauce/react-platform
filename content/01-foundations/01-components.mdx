@@ -1,0 +1,100 @@
+---
+title: Components are functions
+minutes: 6
+docs:
+  - title: "react.dev: Your First Component"
+    url: https://react.dev/learn/your-first-component
+  - title: "react.dev: Importing and Exporting Components"
+    url: https://react.dev/learn/importing-and-exporting-components
+---
+
+A React app is a tree of **components**. Each component is a JavaScript function that returns markup describing one piece of the screen: a button, a card, a whole page. You build bigger components by using smaller ones inside them, the same way you build bigger functions by calling smaller ones.
+
+## The smallest useful component
+
+```tsx
+function Greeting() {
+  return <p>Welcome back!</p>;
+}
+```
+
+Three things make this a component rather than an ordinary function:
+
+- **It returns JSX**, the HTML-like syntax inside the `return`. JSX gets its own lesson next.
+- **Its name starts with a capital letter.** React uses the capital to tell your components apart from built-in tags. `<Greeting />` is your function; `<greeting />` would be read as an unknown HTML element.
+- **It is used like a tag.** You don't call `Greeting()` yourself. You write `<Greeting />` and React decides when to call it.
+
+When the markup spans several lines, wrap it in parentheses after `return`. Without them, JavaScript ends the statement at the line break and the function returns `undefined`.
+
+## Composing components
+
+Here a `Dashboard` is built from two smaller components. Edit the code: rename a heading, add a third `StatCard`, or remove one, and watch the preview update.
+
+<Sandbox>
+
+```tsx App.tsx
+import { StatCard } from "./StatCard";
+
+function Dashboard() {
+  return (
+    <main>
+      <h1>This week</h1>
+      <StatCard />
+      <StatCard />
+    </main>
+  );
+}
+
+export default function App() {
+  return <Dashboard />;
+}
+```
+
+```tsx StatCard.tsx
+export function StatCard() {
+  return (
+    <section style={{ border: "1px solid #ccc", padding: 12, margin: 8 }}>
+      <h2>Tasks closed</h2>
+      <p>14</p>
+    </section>
+  );
+}
+```
+
+</Sandbox>
+
+Both cards say the same thing because `StatCard` has no way to receive different data yet. Props, two lessons from now, fix that.
+
+## Files, exports and imports
+
+Components usually live in their own files and move between them with ordinary JavaScript modules:
+
+- A **default export** (`export default function App`) is imported without braces and can be given any name: `import App from "./App"`.
+- A **named export** (`export function StatCard`) is imported by its exact name, in braces: `import { StatCard } from "./StatCard"`.
+
+A file can have at most one default export and any number of named ones. Many teams prefer named exports for components because renaming then has to happen everywhere at once, and editors can find every use. The sandboxes in this course use a default export for `App` because that is the entry point the preview renders.
+
+<CommonMistake title="Defining a component inside another component">
+
+It is tempting to declare a small helper component right where it is used:
+
+```tsx
+function TaskList() {
+  // 🔴 A new Row function is created on every render of TaskList
+  function Row() {
+    return <li>…</li>;
+  }
+  return <ul><Row /></ul>;
+}
+```
+
+Every time `TaskList` renders, `Row` is a brand new function, so React treats it as a different component type. It throws away the old `Row` output and builds it again from scratch, which is slow and resets anything the row was keeping (such as text typed into an input). Declare every component at the top level of a module. If the inner component needs data from the outer one, pass it as a prop.
+
+</CommonMistake>
+
+## Recap
+
+- A component is a function that returns JSX and has a capitalised name.
+- You use components as tags, `<StatCard />`, and nest them to build larger UI.
+- Share components between files with default or named exports.
+- Declare components at the top level, never inside another component.

@@ -11,7 +11,7 @@ type Summary = {
 test.describe.configure({ mode: 'parallel' })
 
 async function runCase(page: import('@playwright/test').Page, name: string) {
-  await page.goto(`/?case=${name}`)
+  await page.goto(`/_checks/sandpack?case=${name}`)
   const result = page.getByTestId('result')
   await expect(result).toBeVisible({ timeout: 200_000 })
   const summary = JSON.parse((await result.textContent()) ?? '{}') as Summary
@@ -37,7 +37,7 @@ for (const name of ['rtl-minimal', 'ts-syntax', 'router', 'query', 'msw', 'msw-v
 }
 
 test('preview: renders the app in the preview iframe', async ({ page }) => {
-  await page.goto('/?case=preview')
+  await page.goto('/_checks/sandpack?case=preview')
   await expect(
     page.frameLocator('iframe').first().getByRole('heading', { name: 'Hello from the preview' }),
   ).toBeVisible({ timeout: 200_000 })

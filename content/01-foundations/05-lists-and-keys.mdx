@@ -1,0 +1,101 @@
+---
+title: Lists and keys
+minutes: 8
+docs:
+  - title: "react.dev: Rendering Lists"
+    url: https://react.dev/learn/rendering-lists
+  - title: "react.dev: Fragment"
+    url: https://react.dev/reference/react/Fragment
+---
+
+Most real screens show collections: tasks, comments, search results. You keep the data in an array and turn each item into JSX with the array methods you already use. React adds one requirement, the `key`, so it can follow each item across renders.
+
+## From data to elements with `map`
+
+JSX can render an array of elements. `map` produces that array from your data, and `filter` picks which items to include first:
+
+```tsx
+const open = tasks.filter((task) => !task.done);
+return (
+  <ul>
+    {open.map((task) => (
+      <li key={task.id}>{task.title}</li>
+    ))}
+  </ul>
+);
+```
+
+When the item markup grows, move it into a component and give the key to that component's tag: `<TaskItem key={task.id} task={task} />`.
+
+## What keys are for
+
+A key is a name for an item among its siblings. When the array changes, because an item is added, removed or moved, React matches old and new elements by key. Elements with the same key are treated as the same item, so React updates them in place and keeps any state and DOM they hold (focus, typed text, scroll position).
+
+The rules:
+
+- **Unique among siblings.** Two items in the same list can't share a key. Items in different lists can.
+- **Stable.** The same item gets the same key every render. Use an ID that comes with the data, such as a database ID or a slug.
+- **Not invented while rendering.** `key={Math.random()}` gives every item a new identity each render, so React rebuilds all of them and loses their state.
+
+The array index is the fallback React uses when you omit a key. It's fine for a list that never changes order or length. For anything that can be sorted, filtered or edited, index keys attach state to the wrong item.
+
+<Sandbox>
+
+```tsx
+import { Fragment } from "react";
+
+type Release = { id: string; version: string; date: string; notes: string[] };
+
+const releases: Release[] = [
+  { id: "r3", version: "2.1.0", date: "2026-10-02", notes: ["Dark mode", "Faster search"] },
+  { id: "r2", version: "2.0.1", date: "2026-09-14", notes: ["Fixed login loop"] },
+  { id: "r1", version: "2.0.0", date: "2026-09-01", notes: ["New dashboard", "Export to CSV", "Keyboard shortcuts"] },
+];
+
+export default function App() {
+  return (
+    <dl>
+      {releases.map((release) => (
+        <Fragment key={release.id}>
+          <dt>
+            <strong>{release.version}</strong> — {release.date}
+          </dt>
+          <dd>
+            <ul>
+              {release.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </dd>
+        </Fragment>
+      ))}
+    </dl>
+  );
+}
+```
+
+</Sandbox>
+
+Each release produces two sibling elements, `<dt>` and `<dd>`, so the key goes on a `Fragment` wrapping them. The short `<>` syntax can't take a key; import `Fragment` and write it out. The notes use the note text as a key, which works because the notes within one release are unique and never edited. Remove `key={release.id}`, then open your browser's developer console to see the warning React prints.
+
+<CommonMistake title="Expecting key to arrive as a prop">
+
+`key` is read by React and isn't passed to your component:
+
+```tsx
+function TaskItem({ key, task }) {
+  // 🔴 key is always undefined here
+  return <li id={key}>{task.title}</li>;
+}
+```
+
+If the component needs the ID, pass it again under another name: `<TaskItem key={task.id} taskId={task.id} task={task} />`.
+
+</CommonMistake>
+
+## Recap
+
+- Use `filter` to choose items and `map` to turn them into elements.
+- Give every element in the array a `key` that is unique among its siblings and stable across renders, ideally an ID from your data.
+- Put the key on the outermost element `map` returns. That's a `Fragment` when you return several siblings.
+- Components don't receive `key`; pass the ID separately if they need it.

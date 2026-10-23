@@ -1,9 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { SandpackCheck } from './checks/SandpackCheck'
+import { RouterProvider } from 'react-router/dom'
+import './index.css'
+import { ProgressProvider } from './progress/ProgressProvider'
+import { createRouter } from './router'
+
+const router = createRouter()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SandpackCheck />
+    <ProgressProvider>
+      <RouterProvider router={router} />
+    </ProgressProvider>
   </StrictMode>,
 )

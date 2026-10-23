@@ -1,0 +1,142 @@
+import { useSandpackClient } from '@codesandbox/sandpack-react'
+import type { SandpackMessage } from '@codesandbox/sandpack-client'
+import { useEffect, useRef, useState } from 'react'
+import { summarise, type RunSummary, type TestResult } from './run-summary'
+
+type Status = 'initialising' | 'idle' | 'running' | 'complete'
+
+type TestMessage = Extract<SandpackMessage, { type: 'test' }>
+
+const ANSI = new RegExp(String.fromCharCode(27) + String.raw`\[[0-9;]*m`, 'g')
+const clean = (message: string | undefined) => (message ?? '').replace(ANSI, '').trim()
+
+/**
+ * "Run tests" for the exercise: talks to Sandpack's in-browser Jest runner
+ * through its own hidden client, like Sandpack's <SandpackTests>, but runs
+ * only on request and reports each completed run exactly once.
+ */
+export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) => void }) {
+  const { iframe, listen, getClient } = useSandpackClient()
+  const [status, setStatus] = useState<Status>('initialising')
+  const [summary, setSummary] = useState<RunSummary | null>(null)
+  const run = useRef<{ tests: TestResult[]; fileErrors: string[] } | null>(null)
+  const onCompleteRef = useRef(onComplete)
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  }, [onComplete])
+
+  useEffect(() => {
+    return listen((message) => {
+      if (message.type === 'done') {
+        setStatus((current) => (current === 'initialising' ? 'idle' : current))
+        return
+      }
+      if (message.type !== 'test') return
+      const event = message as TestMessage
+      switch (event.event) {
+        case 'initialize_tests':
+          setStatus((current) => (current === 'initialising' ? 'idle' : current))
+          break
+        case 'total_test_start':
+          run.current = { tests: [], fileErrors: [] }
+          setStatus('running')
+          break
+        case 'file_error':
+          run.current?.fileErrors.push(`${event.path}: ${clean(event.error.message)}`)
+          break
+        case 'test_end':
+          if (event.test.status === 'pass' || event.test.status === 'fail') {
+            run.current?.tests.push({
+              name: event.test.name,
+              blocks: event.test.blocks,
+              status: event.test.status,
+              error: event.test.errors.length ? clean(event.test.errors[0].message) : undefined,
+            })
+          }
+          break
+        case 'total_test_end': {
+          const finished = run.current
+          run.current = null
+          if (!finished) break
+          const result = summarise(finished.tests, finished.fileErrors)
+          setSummary(result)
+          setStatus('complete')
+          onCompleteRef.current(result)
+          break
+        }
+      }
+    })
+  }, [listen])
+
+  const runTests = () => {
+    const client = getClient()
+    if (!client) return
+    setStatus('running')
+    client.dispatch({ type: 'run-all-tests' })
+  }
+
+  const passCount = summary?.tests.filter((test) => test.status === 'pass').length ?? 0
+
+  return (
+    <section aria-labelledby="tests-heading" className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <iframe ref={iframe} title="Test runner" className="hidden" />
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="tests-heading" className="text-lg font-semibold">
+          Tests
+        </h2>
+        <button
+          type="button"
+          onClick={runTests}
+          disabled={status === 'initialising' || status === 'running'}
+          className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+        >
+          {status === 'initialising' ? 'Loading…' : status === 'running' ? 'Running…' : 'Run tests'}
+        </button>
+      </div>
+
+      <div role="status" aria-live="polite" className="text-sm text-slate-600">
+        {status === 'complete' && summary
+          ? summary.passed
+            ? `All ${summary.tests.length} tests passed.`
+            : `${passCount} of ${summary.tests.length} tests passed.`
+          : status === 'running'
+            ? 'Running tests…'
+            : 'Run the tests when you are ready to check your work.'}
+      </div>
+
+      {summary && summary.fileErrors.length > 0 && (
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-900">
+          <p className="font-medium">The tests could not run:</p>
+          {summary.fileErrors.map((error) => (
+            <pre key={error} className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs">
+              {error}
+            </pre>
+          ))}
+        </div>
+      )}
+
+      {summary && summary.tests.length > 0 && (
+        <ul aria-label="Test results" className="flex flex-col gap-2">
+          {summary.tests.map((test) => {
+            const label = [...test.blocks, test.name].join(' › ')
+            return (
+              <li key={label} className="rounded-md border border-slate-100 p-2">
+                <span className={test.status === 'pass' ? 'text-green-700' : 'text-red-700'}>
+                  {test.status === 'pass' ? '✓ Pass' : '✗ Fail'}
+                </span>{' '}
+                <span>{label}</span>
+                {test.error && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-sm text-slate-600">Why it failed</summary>
+                    <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-xs">{test.error}</pre>
+                  </details>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}

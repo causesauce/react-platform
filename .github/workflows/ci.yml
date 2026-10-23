@@ -2,18 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [main, 'claude/**', foundation, 'modules-*']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  sandpack:
-    name: Sandpack runner check
+  check:
+    name: Lint, types, unit tests, content validation, build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      # Every exercise's tests must fail on starter/ and pass on solution/.
+      - run: npm run validate
+      - run: npm run build
+
+  smoke:
+    name: Smoke test (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -22,7 +44,29 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --project=sandpack
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: ${{ failure() }}
+        with:
+          name: smoke-report
+          path: playwright-report/
+          retention-days: 7
+
+  sandpack:
+    # Runs exercises in Sandpack's hosted bundler (*.codesandbox.io), so it
+    # depends on that service being up.
+    name: Exercises in the Sandpack runner (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:sandpack
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:

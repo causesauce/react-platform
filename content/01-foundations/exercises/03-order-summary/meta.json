@@ -1,0 +1,10 @@
+{
+  "title": "An order summary that adapts",
+  "difficulty": "easy",
+  "task": "Make `OrderSummary` describe the cart. With no items it shows only \"Your cart is empty.\" Otherwise it shows the item count (\"1 item\", \"3 items\") and the total, plus a \"Free shipping\" note when the total is 50 or more.",
+  "hints": [
+    "When the whole output changes, return early: `if (itemCount === 0) { return <p>…</p>; }`.",
+    "Look closely at `{itemCount && …}`. When `itemCount` is `0`, the expression evaluates to `0`, and React renders that number.",
+    "Use a ternary for the word, `itemCount === 1 ? \"item\" : \"items\"`, and a boolean on the left of `&&` for the note: `{total >= 50 && <p>Free shipping</p>}`."
+  ]
+}

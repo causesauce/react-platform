@@ -8,7 +8,8 @@ import { useState } from 'react'
 
 // Diagnostic page: runs small Jest-style suites inside Sandpack's browser test
 // runner so CI can confirm which testing libraries work there. Each case is
-// selected with ?case=<name>; results are written to [data-testid=result].
+// selected with /_checks/sandpack?case=<name>; results are written to
+// [data-testid=result].
 
 type Case = {
   dependencies: Record<string, string>

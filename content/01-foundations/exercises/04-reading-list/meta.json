@@ -1,0 +1,10 @@
+{
+  "title": "A reading list from data",
+  "difficulty": "medium",
+  "task": "Render `books` as two lists: \"Up next\" for unfinished books and \"Finished\" for the rest. Each item reads \"Title by Author\" and has a stable key. A group with no books shows \"Nothing here yet.\" instead of an empty list.",
+  "hints": [
+    "Split the array first: `const upNext = books.filter((book) => !book.finished);` and the same for finished books.",
+    "Turn each group into list items with `map`, and use `book.id` as the `key`. The ID belongs to the book, so it stays the same however the list is sorted.",
+    "The two sections share the same shape, so extract a `BookGroup` component that takes a title and books and returns either the `<ul>` or the empty-state `<p>`."
+  ]
+}

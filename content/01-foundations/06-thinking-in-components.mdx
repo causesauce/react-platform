@@ -1,0 +1,119 @@
+---
+title: Thinking in components
+minutes: 9
+docs:
+  - title: "react.dev: Thinking in React"
+    url: https://react.dev/learn/thinking-in-react
+  - title: "react.dev: Understanding Your UI as a Tree"
+    url: https://react.dev/learn/understanding-your-ui-as-a-tree
+---
+
+You now have every piece needed to build a static screen: components, JSX, props, conditions and lists. This lesson is about the step before the code, which is deciding what the components should be. React's docs describe a five-step process; this module covers the first two. The rest needs state, which is module 2's topic.
+
+## Step 1: Draw boxes around the design
+
+Take a mockup, or a sketch of what you want, and draw a box around every part that does one job. Name each box. Then look for boxes inside boxes: those nested boxes become your component tree.
+
+Some questions that help decide where a box goes:
+
+- **Does it repeat?** A row in a list, a card in a grid. Repeated pieces almost always become a component that takes the item as a prop.
+- **Does it have one clear purpose?** If a description needs "and", for example "shows the task and filters the list", it's probably two components.
+- **Does the data have this shape?** Data and UI often line up. A project has tasks, so a `ProjectCard` containing `TaskRow`s mirrors the data.
+
+For a project dashboard, that might give:
+
+```
+ProjectDashboard
+├── DashboardHeader      (title, date range)
+├── StatsRow
+│   └── StatCard ×3      (one per metric)
+└── ProjectList
+    └── ProjectCard ×n   (one per project)
+        └── TaskRow ×n   (one per task)
+```
+
+There's no single right tree. Aim for components you could describe in one short sentence.
+
+## Step 2: Build a static version from data
+
+Next, write the tree as components that render **hard-coded data** passed down through props. Leave out interactivity: no clicking, no typing, no state. The work is mostly mechanical, and doing it first pays off twice: you get something to look at, and you find out whether your data shape suits the UI before any behaviour depends on it.
+
+You can work top-down, starting from the outer component and stubbing the children, or bottom-up, starting with the leaves. Top-down is quicker for small screens. Bottom-up suits larger ones, where you want each piece finished and checked before you combine them.
+
+<Sandbox>
+
+```tsx App.tsx
+import { projects } from "./data";
+import { ProjectCard } from "./ProjectCard";
+
+export default function App() {
+  const openTasks = projects.flatMap((project) => project.tasks).filter((task) => !task.done);
+  return (
+    <main>
+      <h1>Projects</h1>
+      <p>{openTasks.length} open tasks across {projects.length} projects</p>
+      {projects.map((project) => (
+        <ProjectCard key={project.id} project={project} />
+      ))}
+    </main>
+  );
+}
+```
+
+```tsx ProjectCard.tsx
+import type { Project } from "./data";
+
+export function ProjectCard({ project }: { project: Project }) {
+  return (
+    <section aria-labelledby={`project-${project.id}`}>
+      <h2 id={`project-${project.id}`}>{project.name}</h2>
+      {project.tasks.length === 0 ? (
+        <p>No tasks yet.</p>
+      ) : (
+        <ul>
+          {project.tasks.map((task) => (
+            <li key={task.id}>
+              {task.done ? "✓ " : "○ "}
+              {task.title}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+```
+
+```tsx data.ts
+export type Task = { id: string; title: string; done: boolean };
+export type Project = { id: string; name: string; tasks: Task[] };
+
+export const projects: Project[] = [
+  {
+    id: "web",
+    name: "Website refresh",
+    tasks: [
+      { id: "w1", title: "Audit current pages", done: true },
+      { id: "w2", title: "New navigation", done: false },
+    ],
+  },
+  { id: "app", name: "Mobile app", tasks: [] },
+];
+```
+
+</Sandbox>
+
+Notice what's **not** stored: the number of open tasks. It's computed from `projects` during render. If you stored it separately, the count and the list could disagree. Derive anything you can calculate from data you already have; module 2 comes back to this when the data starts changing.
+
+<CommonMistake title="One giant component">
+
+A single 300-line component that renders the whole page feels fast to write and is slow to change. You can't reuse a piece of it, every edit risks the rest, and you can't tell at a glance what it shows. When a component's JSX scrolls off the screen, or you're about to copy and paste a block of markup, draw another box: extract a component and pass it what it needs as props.
+
+</CommonMistake>
+
+## Recap
+
+- Start from the design: box each part with one job, name it, and nest the boxes into a tree.
+- Build a static version first, rendering hard-coded data through props with no state.
+- Compute values you can derive from your data instead of storing them separately.
+- Small components you can describe in a sentence are easier to reuse, test and change.
