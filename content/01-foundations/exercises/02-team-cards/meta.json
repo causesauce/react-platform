@@ -1,0 +1,10 @@
+{
+  "title": "Team cards with props",
+  "difficulty": "easy",
+  "task": "Finish `MemberCard` so it shows each person's avatar, name and role from its props. When no `role` is passed, show \"Contributor\". `App` already renders three cards.",
+  "hints": [
+    "Destructure the props in the parameter list: `function MemberCard({ name, avatarUrl, role }: MemberCardProps)`.",
+    "A default value goes right in the destructuring: `role = \"Contributor\"`. It's used whenever the prop is missing.",
+    "Return an `<article>` with `<img src={avatarUrl} alt={`${name}'s avatar`} />`, then `<h2>{name}</h2>` and `<p>{role}</p>`."
+  ]
+}

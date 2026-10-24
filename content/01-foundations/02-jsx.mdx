@@ -1,0 +1,93 @@
+---
+title: Writing JSX
+minutes: 7
+docs:
+  - title: "react.dev: Writing Markup with JSX"
+    url: https://react.dev/learn/writing-markup-with-jsx
+  - title: "react.dev: JavaScript in JSX with Curly Braces"
+    url: https://react.dev/learn/javascript-in-jsx-with-curly-braces
+---
+
+JSX lets you write markup inside JavaScript. It looks like HTML, but a build step turns every tag into a JavaScript object that React reads. That origin explains all of JSX's rules: they are the places where "it's really JavaScript" shows through.
+
+## Three rules that differ from HTML
+
+**1. Return one root.** A function returns one value, so a component returns one element. When you don't want an extra `div` in the page, group siblings in a fragment, written `<>` and `</>`:
+
+```tsx
+function Price() {
+  return (
+    <>
+      <dt>Price</dt>
+      <dd>€12</dd>
+    </>
+  );
+}
+```
+
+**2. Close every tag.** Elements that HTML lets you leave open must be closed in JSX: `<img />`, `<br />`, `<input />`.
+
+**3. Attributes are mostly camelCase.** Attributes become object keys, so `class` (a reserved word) is `className`, `for` is `htmlFor`, and `tabindex` is `tabIndex`. Two families keep their dashes: `aria-*` and `data-*`.
+
+## Curly braces open a window to JavaScript
+
+Inside JSX, `{ }` switches back to JavaScript. You can put any **expression** there: a variable, a calculation, a function call. Statements such as `if` or `for` don't fit, because they don't produce a value; you will see the alternatives in the conditional rendering and lists lessons.
+
+Braces work in two places: as text between tags, and as an attribute value instead of quotes. A `style` attribute takes an object, which is why you see double braces: the outer pair opens JavaScript, the inner pair is the object literal. CSS property names inside it are camelCase too.
+
+<Sandbox>
+
+```tsx
+const project = {
+  name: "Garden planner",
+  openTasks: 7,
+  accent: "#2f855a",
+};
+
+function formatDue(date: Date) {
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+}
+
+export default function App() {
+  const due = new Date(2026, 10, 30);
+  return (
+    <article style={{ borderLeft: `6px solid ${project.accent}`, paddingLeft: 12 }}>
+      <h1 className="title">{project.name}</h1>
+      <p>
+        {project.openTasks} open tasks, due {formatDue(due)}.
+      </p>
+      <label htmlFor="note">Note</label>
+      <input id="note" aria-describedby="note-help" />
+      <p id="note-help">{project.openTasks > 5 ? "Busy week ahead." : "Light week."}</p>
+    </article>
+  );
+}
+```
+
+</Sandbox>
+
+Try changing `openTasks` to `3`, or switch the accent colour. Everything inside braces is re-evaluated each time the component renders.
+
+<CommonMistake title="Putting an object where text is expected">
+
+Braces in text position must produce something React can display: a string, a number, an element, or a list of those. Rendering a plain object fails:
+
+```tsx
+const owner = { name: "Ada", initials: "AL" };
+
+// 🔴 Error: Objects are not valid as a React child
+<p>Owner: {owner}</p>
+
+// ✅ Pick the field you mean
+<p>Owner: {owner.name}</p>
+```
+
+Dates hit the same error. Format them into a string first, as `formatDue` does above.
+
+</CommonMistake>
+
+## Recap
+
+- JSX compiles to JavaScript objects, so a component returns a single root. Use `<>…</>` when you don't want a wrapper element.
+- Close every tag, and use camelCase attribute names except for `aria-*` and `data-*`.
+- `{ }` embeds any JavaScript expression, as text or as an attribute value. `style` takes an object, hence `{{ … }}`.

@@ -1,0 +1,105 @@
+---
+title: Conditional UI
+minutes: 7
+docs:
+  - title: "react.dev: Conditional Rendering"
+    url: https://react.dev/learn/conditional-rendering
+---
+
+Screens change shape depending on data: an empty state when there is nothing to show, a warning only when something is wrong, a badge only for some items. React has no special template syntax for this. You use the JavaScript you already know, and pick the tool that reads best for each case.
+
+## Four tools, from widest to narrowest
+
+**An early `return`** suits cases where a whole component looks different. Handle the special case first and keep the main markup unindented:
+
+```tsx
+function TaskList({ tasks }: { tasks: string[] }) {
+  if (tasks.length === 0) {
+    return <p>No tasks yet. Enjoy the quiet.</p>;
+  }
+  return <ul>{/* …the list… */}</ul>;
+}
+```
+
+**Returning `null`** renders nothing at all. It's useful for components that only sometimes have something to say, such as a banner with no message.
+
+**The conditional operator `a ? b : c`** chooses between two pieces of JSX inline, where an `if` statement can't go:
+
+```tsx
+<p>{isOverdue ? "Overdue" : `Due ${dueDate}`}</p>
+```
+
+**`&&`** renders something or nothing. `cond && <Badge />` gives `<Badge />` when `cond` is true, and `false` otherwise. React renders nothing for `false`, `null` and `undefined`.
+
+<Sandbox>
+
+```tsx
+type Task = { title: string; done: boolean; overdue: boolean; comments: number };
+
+function TaskRow({ task }: { task: Task }) {
+  return (
+    <li>
+      {task.done ? <s>{task.title}</s> : task.title}
+      {task.overdue && !task.done && <strong> · overdue</strong>}
+      {task.comments > 0 && <span> · {task.comments} comments</span>}
+    </li>
+  );
+}
+
+function Banner({ message }: { message: string | null }) {
+  if (message === null) return null;
+  return <p role="status">{message}</p>;
+}
+
+export default function App() {
+  const tasks: Task[] = [
+    { title: "Draft the brief", done: true, overdue: false, comments: 2 },
+    { title: "Book the venue", done: false, overdue: true, comments: 0 },
+    { title: "Send invites", done: false, overdue: false, comments: 0 },
+  ];
+  const overdue = tasks.filter((task) => task.overdue && !task.done).length;
+  return (
+    <main>
+      <Banner message={overdue > 0 ? `Overdue tasks: ${overdue}` : null} />
+      <ul>
+        <TaskRow task={tasks[0]} />
+        <TaskRow task={tasks[1]} />
+        <TaskRow task={tasks[2]} />
+      </ul>
+    </main>
+  );
+}
+```
+
+</Sandbox>
+
+Mark "Book the venue" as done and the banner disappears, because `Banner` returns `null`. Try writing the comment count as `task.comments && …` instead and see what appears next to the tasks with no comments. The box below explains it.
+
+<CommonMistake title="A number on the left of &&">
+
+`&&` doesn't return `true` or `false`. It returns its left side when that side is falsy. For a count of zero, that's the number `0`, and React renders numbers:
+
+```tsx
+// 🔴 Shows a stray "0" when there are no comments
+{task.comments && <span>{task.comments} comments</span>}
+
+// ✅ Make the left side a real boolean
+{task.comments > 0 && <span>{task.comments} comments</span>}
+```
+
+The same trap catches `items.length && …`. Compare explicitly, or use a ternary that returns `null`.
+
+</CommonMistake>
+
+## Choosing between them
+
+- The whole output changes → early `return`.
+- Two alternatives in the middle of markup → `? :`.
+- Something or nothing in the middle of markup → `&&`, with a boolean on the left.
+- Nested ternaries are hard to read. Pull the logic into a variable or a small component before the `return`.
+
+## Recap
+
+- Conditional UI is plain JavaScript: `if`, `? :` and `&&`.
+- A component can return `null` to render nothing.
+- Keep the left side of `&&` a boolean so `0` never leaks onto the page.

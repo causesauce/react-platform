@@ -1,0 +1,6 @@
+{
+  "title": "Foundations",
+  "summary": "Components, JSX, props, conditional UI and lists: the pieces every React screen is built from, and how to split a design into them.",
+  "order": 1,
+  "prerequisites": []
+}

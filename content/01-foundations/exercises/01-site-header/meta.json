@@ -1,0 +1,10 @@
+{
+  "title": "Compose a page from components",
+  "difficulty": "easy",
+  "task": "Create `SiteHeader` and `SiteFooter` components and render them from `App`. The header shows the site name as the page's main heading and a navigation landmark labelled \"Main\" with three links. The footer shows the copyright line.",
+  "hints": [
+    "A component is a function with a capitalised name that returns JSX. Declare `SiteHeader` and `SiteFooter` next to `App`, then use them as tags: `<SiteHeader />`.",
+    "A `<nav>` element is a navigation landmark. Give it `aria-label=\"Main\"` so assistive technology, and the tests, can tell it apart from other navigation.",
+    "`SiteHeader` returns a `<header>` holding an `<h1>` and a `<nav aria-label=\"Main\">` with three `<a href=\"…\">` links. `SiteFooter` returns a `<footer>` with the copyright text."
+  ]
+}

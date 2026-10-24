@@ -1,0 +1,116 @@
+---
+title: Passing data with props
+minutes: 8
+docs:
+  - title: "react.dev: Passing Props to a Component"
+    url: https://react.dev/learn/passing-props-to-a-component
+  - title: "react.dev: Using TypeScript"
+    url: https://react.dev/learn/typescript
+---
+
+A component that always shows the same thing is of limited use. **Props** are how a parent hands data to a child: you write them as attributes on the tag, and React collects them into a single object that it passes as the function's first argument.
+
+## Sending and reading props
+
+```tsx
+<StatCard label="Tasks closed" value={14} />
+```
+
+`StatCard` receives `{ label: "Tasks closed", value: 14 }`. Most components destructure that object right in the parameter list, so each prop becomes a local variable:
+
+```tsx
+type StatCardProps = {
+  label: string;
+  value: number;
+  unit?: string;
+};
+
+function StatCard({ label, value, unit = "" }: StatCardProps) {
+  return (
+    <section>
+      <h2>{label}</h2>
+      <p>{value}{unit}</p>
+    </section>
+  );
+}
+```
+
+The `StatCardProps` type documents the component's contract: which props exist, which are required, and what kind of value each takes. TypeScript then flags a missing `label` or a `value` passed as a string. Module 4 covers typing in depth; for now, a `type` with one field per prop is enough.
+
+`unit = ""` is a **default value**. It applies when the prop is missing or explicitly `undefined`. It does not apply when the parent passes `null` or `0`, since those are real values.
+
+## Children: passing JSX as a prop
+
+Anything you nest between a component's opening and closing tags arrives as a prop called `children`. This lets a component provide a frame without knowing what goes in it.
+
+<Sandbox>
+
+```tsx
+import type { ReactNode } from "react";
+
+type StatCardProps = { label: string; value: number; unit?: string };
+
+function StatCard({ label, value, unit = "" }: StatCardProps) {
+  return (
+    <Panel title={label}>
+      <p style={{ fontSize: 32, margin: 0 }}>
+        {value}
+        {unit}
+      </p>
+    </Panel>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12, margin: 8 }}>
+      <h2 style={{ fontSize: 14, textTransform: "uppercase" }}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+export default function App() {
+  return (
+    <main style={{ display: "flex", flexWrap: "wrap" }}>
+      <StatCard label="Tasks closed" value={14} />
+      <StatCard label="Hours logged" value={31.5} unit=" h" />
+      <StatCard label="Completion" value={82} unit="%" />
+      <Panel title="Note">
+        <p>Panels can hold any markup, not just numbers.</p>
+      </Panel>
+    </main>
+  );
+}
+```
+
+</Sandbox>
+
+`Panel` doesn't care whether its children are a number, a paragraph or another component. That makes it a good fit for layout pieces such as cards, dialogs and sidebars.
+
+## Props flow one way
+
+Data moves from parent to child. A child can't reach up and change what its parent passed. If something on screen needs to change in response to the user, the parent keeps that changing value as **state** (module 2) and passes the current value down as a prop. Each render, the child receives a fresh props object reflecting the latest data.
+
+<CommonMistake title="Changing a prop inside the child">
+
+Props are read-only. Assigning to one, or mutating an object you received, changes data the parent owns behind its back:
+
+```tsx
+function TaskTitle({ task }: { task: { title: string } }) {
+  // 🔴 Mutates the parent's object
+  task.title = task.title.trim();
+  return <h3>{task.title}</h3>;
+}
+```
+
+Compute what you need into a new local variable instead: `const title = task.title.trim();`. React expects components to be pure, meaning that the same props always produce the same output and that rendering changes nothing outside the component.
+
+</CommonMistake>
+
+## Recap
+
+- Props are attributes on a component's tag; the component receives them as one object, usually destructured.
+- Describe props with a TypeScript `type`; mark optional ones with `?` and give them defaults in the parameter list.
+- Nested JSX arrives as `children`, which is useful for wrappers and layout.
+- Props are read-only. Data flows down; changing values live in state.
