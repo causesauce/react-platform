@@ -65,3 +65,29 @@ test('unknown pages and an empty review queue are handled', async ({ page }) => 
   await page.goto('/review')
   await expect(page.getByText('Nothing to review right now.')).toBeVisible()
 })
+
+test('the editor and preview can be resized by dragging, and the size is remembered', async ({ page }) => {
+  await page.goto('/modules/foundations/exercises/team-cards')
+  const split = page.getByRole('separator', { name: 'Resize editor and preview' })
+  const height = page.getByRole('separator', { name: 'Resize height' })
+  await expect(split).toHaveAttribute('aria-valuenow', '55')
+
+  const box = (await split.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + 100)
+  await page.mouse.down()
+  await page.mouse.move(box.x - 200, box.y + 100, { steps: 5 })
+  await page.mouse.up()
+  const narrowed = Number(await split.getAttribute('aria-valuenow'))
+  expect(narrowed).toBeLessThan(45)
+
+  await height.scrollIntoViewIfNeeded()
+  const handle = (await height.boundingBox())!
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 2)
+  await page.mouse.down()
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 150, { steps: 5 })
+  await page.mouse.up()
+  expect(Number(await height.getAttribute('aria-valuenow'))).toBeGreaterThan(600)
+
+  await page.reload()
+  await expect(split).toHaveAttribute('aria-valuenow', String(narrowed))
+})

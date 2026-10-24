@@ -104,9 +104,16 @@ describe('exercise page', () => {
     }
     expect(screen.getAllByText(/^Hint \d:$/)).toHaveLength(hints.length)
 
+    await user.click(screen.getByRole('button', { name: 'Hide hints' }))
+    expect(screen.queryByText(/^Hint \d:$/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: `Show ${hints.length} hints you've seen` }))
+    expect(screen.getAllByText(/^Hint \d:$/)).toHaveLength(hints.length)
+
     await user.click(screen.getByRole('button', { name: 'Show the solution' }))
     expect(screen.getByRole('heading', { name: 'Solution' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: "Why it's written this way" })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Hide solution' }))
+    expect(screen.queryByRole('heading', { name: "Why it's written this way" })).not.toBeInTheDocument()
     expect(store.getSnapshot().exercises[firstExercise.id]).toMatchObject({
       hintsRevealed: hints.length,
       solutionViewed: true,

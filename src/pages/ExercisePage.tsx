@@ -73,6 +73,7 @@ export function ExercisePage() {
       </Suspense>
 
       <HintsAndSolution
+        key={exercise.id}
         exercise={exercise}
         hintsRevealed={state.hintsRevealed}
         solutionViewed={state.solutionViewed}
@@ -99,14 +100,35 @@ function HintsAndSolution({ exercise, hintsRevealed, solutionViewed, passed, sol
   const store = useProgressStore()
   const { hints } = exercise.meta
   const solutionUnlocked = passed || hintsRevealed >= hints.length
+  // Collapsing only hides what was revealed; progress keeps the count.
+  const [hintsOpen, setHintsOpen] = useState(true)
+  const [solutionOpen, setSolutionOpen] = useState(true)
+
+  const revealNext = () => {
+    store.revealHint(exercise.id, hints.length)
+    setHintsOpen(true)
+  }
 
   return (
     <section aria-labelledby="hints-heading" className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 id="hints-heading" className="text-lg font-semibold">
-        Hints
-      </h2>
-      {hintsRevealed > 0 && (
-        <ol className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="hints-heading" className="text-lg font-semibold">
+          Hints
+        </h2>
+        {hintsRevealed > 0 && (
+          <button
+            type="button"
+            aria-expanded={hintsOpen}
+            aria-controls="hint-list"
+            onClick={() => setHintsOpen((open) => !open)}
+            className="text-sm text-slate-600 underline hover:text-slate-900"
+          >
+            {hintsOpen ? 'Hide hints' : `Show ${hintsRevealed === 1 ? 'the hint' : `${hintsRevealed} hints`} you've seen`}
+          </button>
+        )}
+      </div>
+      {hintsRevealed > 0 && hintsOpen && (
+        <ol id="hint-list" className="mt-3 flex flex-col gap-2">
           {hints.slice(0, hintsRevealed).map((hint, index) => (
             <li key={hint} className="rounded-md bg-indigo-50 p-3">
               <span className="font-medium">Hint {index + 1}:</span> <InlineCode text={hint} />
@@ -118,7 +140,7 @@ function HintsAndSolution({ exercise, hintsRevealed, solutionViewed, passed, sol
         {hintsRevealed < hints.length && (
           <button
             type="button"
-            onClick={() => store.revealHint(exercise.id, hints.length)}
+            onClick={revealNext}
             className="rounded-md border border-indigo-600 px-4 py-2 text-indigo-700 hover:bg-indigo-50"
           >
             Show hint {hintsRevealed + 1} of {hints.length}
@@ -139,8 +161,21 @@ function HintsAndSolution({ exercise, hintsRevealed, solutionViewed, passed, sol
       </div>
 
       {solutionViewed && (
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="mt-6 flex items-center justify-between gap-3">
           <h3 className="text-lg font-semibold">Solution</h3>
+          <button
+            type="button"
+            aria-expanded={solutionOpen}
+            aria-controls="solution"
+            onClick={() => setSolutionOpen((open) => !open)}
+            className="text-sm text-slate-600 underline hover:text-slate-900"
+          >
+            {solutionOpen ? 'Hide solution' : 'Show solution'}
+          </button>
+        </div>
+      )}
+      {solutionViewed && solutionOpen && (
+        <div id="solution" className="mt-3 flex flex-col gap-4">
           {Object.entries(solution).map(([path, code]) => (
             <figure key={path}>
               <figcaption className="mb-1 font-mono text-sm text-slate-600">{path.slice(1)}</figcaption>
