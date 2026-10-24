@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 type Summary = {
   tests: { name: string; status: string; error?: string }[]
-  fileErrors: { path: string; error: string }[]
+  fileErrors: string[]
 }
 
 test.describe.configure({ mode: 'parallel' })
@@ -48,7 +48,7 @@ for (const name of ['user-event', 'ts-syntax', 'router', 'query']) {
 for (const name of ['msw', 'msw-v2']) {
   test(`${name}: does not load in Sandpack (known incompatibility)`, async ({ page }) => {
     const summary = await runCase(page, name)
-    expect(summary.fileErrors.map((error) => error.error).join('\n')).toMatch(/Class private methods are not enabled/)
+    expect(summary.fileErrors.join('\n')).toMatch(/Class private methods are not enabled/)
   })
 }
 

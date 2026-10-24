@@ -2,17 +2,18 @@ import {
   SandpackLayout,
   SandpackPreview,
   SandpackProvider,
-  SandpackTests,
   useSandpack,
 } from '@codesandbox/sandpack-react'
 import { useEffect, useState } from 'react'
+import type { RunSummary } from '../exercise/run-summary'
+import { TestRunner } from '../exercise/TestRunner'
 
 // Diagnostic page: runs small Jest-style suites inside Sandpack's browser test
 // runner so CI can confirm which testing libraries work there. Each case is
 // selected with /_checks/sandpack?case=<name>; results are written to
 // [data-testid=result] and the bundler messages seen to [data-testid=events].
-// Tests run only when the "Run tests" button is clicked: in watch mode a
-// second run can reset the results of one still finishing.
+// It uses the same <TestRunner> as exercise pages, so a passing check means
+// the library works in the panel learners use.
 
 type Case = {
   dependencies: Record<string, string>
@@ -317,37 +318,16 @@ test("renders tasks from the mocked API", async () => {
   }
 }
 
-type Summary = {
-  tests: { name: string; status: string; error?: string }[]
-  fileErrors: { path: string; error: string }[]
-}
-
-type SpecLike = {
-  name: string
-  error?: { message?: string }
-  tests: Record<string, { name: string; blocks: string[]; status: string; errors: { message?: string }[] }>
-  describes: Record<string, SpecLike>
-}
-
-function summarise(specs: Record<string, SpecLike>): Summary {
-  const summary: Summary = { tests: [], fileErrors: [] }
-  const walk = (block: SpecLike) => {
-    for (const test of Object.values(block.tests)) {
-      summary.tests.push({
-        name: [...test.blocks, test.name].join(' > '),
-        status: test.status,
-        error: test.errors[0]?.message?.slice(0, 600),
-      })
-    }
-    Object.values(block.describes).forEach(walk)
+/** The shape e2e/sandpack-check.spec.ts reads from [data-testid=result]. */
+function toResult(summary: RunSummary) {
+  return {
+    tests: summary.tests.map((test) => ({
+      name: [...test.blocks, test.name].join(' > '),
+      status: test.status,
+      error: test.error?.slice(0, 600),
+    })),
+    fileErrors: summary.fileErrors.map((error) => error.slice(0, 2000)),
   }
-  for (const spec of Object.values(specs)) {
-    if (spec.error) {
-      summary.fileErrors.push({ path: spec.name, error: String(spec.error.message).slice(0, 2000) })
-    }
-    walk(spec)
-  }
-  return summary
 }
 
 /** Records each distinct bundler message type (and test event) in arrival order. */
@@ -368,7 +348,7 @@ function MessageLog() {
 export function SandpackCheck() {
   const name = new URLSearchParams(window.location.search).get('case') ?? 'rtl'
   const current = cases[name]
-  const [result, setResult] = useState<Summary | null>(null)
+  const [result, setResult] = useState<ReturnType<typeof toResult> | null>(null)
 
   if (!current) {
     return <p>Unknown case. Available: {Object.keys(cases).join(', ')}</p>
@@ -386,12 +366,7 @@ export function SandpackCheck() {
           {name === 'preview' ? (
             <SandpackPreview />
           ) : (
-            <SandpackTests
-              verbose
-              watchMode={false}
-              showWatchButton={false}
-              onComplete={(specs) => setResult(summarise(specs as unknown as Record<string, SpecLike>))}
-            />
+            <TestRunner onComplete={(summary) => setResult(toResult(summary))} />
           )}
         </SandpackLayout>
         <MessageLog />
