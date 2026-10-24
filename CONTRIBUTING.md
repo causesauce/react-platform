@@ -161,13 +161,16 @@ A few short paragraphs on why the solution is written the way it is: the decisio
 
 Every sandbox gets `react`, `react-dom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event` and `@testing-library/jest-dom`. An exercise may add any of these through `meta.json` `dependencies`:
 
-`react-router`, `@tanstack/react-query`, `msw`, `react-hook-form`, `zod`, `@hookform/resolvers`, `zustand`, `@reduxjs/toolkit`, `react-redux`
+`react-router`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers`, `zustand`, `@reduxjs/toolkit`, `react-redux`
 
 Each is pinned to an exact version in `package.json`, so the browser sandbox downloads the same version that validation runs locally. The list lives in `src/content/schema.ts`.
 
-> Verify: CI's `sandpack` job reports which of these actually work in Sandpack's runner (`/_checks/sandpack`). Until it has run green, treat React Router, TanStack Query and MSW exercises as unconfirmed. If one doesn't work there, the brief's fallback applies: those exercises run as local Vitest projects in an `exercises/` folder. Raise it in your PR rather than inventing a workaround.
+CI's `sandpack` job checks which libraries work in Sandpack's runner (see `/_checks/sandpack`).
 
-**TypeScript syntax.** Sandpack compiles the sandbox with an older Babel-based toolchain (the `react-ts` template uses `react-scripts` 4). Until CI confirms newer syntax, avoid `satisfies`, inline type modifiers (`import { type X }`; use a separate `import type { X }`), decorators and `using`.
+- **MSW does not work there.** MSW 2 and 3 use ES private methods (`#method`), which Sandpack's Babel setup can't compile, so `msw` is not on the list. MSW exercises (modules 5 and 11) need the brief's fallback: local Vitest projects in an `exercises/` folder. That folder doesn't exist yet. Write the rest of the module and describe the MSW exercises you'd add in the PR.
+- If another library fails there, the same fallback applies. Raise it in your PR rather than inventing a workaround.
+
+**TypeScript syntax.** Sandpack compiles the sandbox with an older Babel-based toolchain (the `react-ts` template uses `react-scripts` 4). `satisfies`, generics and optional chaining are confirmed to work. ES private class members (`#x`) are confirmed **not** to work, the same limit that blocks MSW. Avoid other recent syntax (decorators, `using`) unless you've checked it, and use a separate `import type { X }` rather than inline `import { type X }`.
 
 ## capstone.md
 

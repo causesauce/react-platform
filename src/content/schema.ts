@@ -29,7 +29,6 @@ export const EXERCISE_BASE_PACKAGES = [
 export const EXERCISE_OPTIONAL_PACKAGES = [
   'react-router',
   '@tanstack/react-query',
-  'msw',
   'react-hook-form',
   'zod',
   '@hookform/resolvers',

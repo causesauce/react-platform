@@ -7,6 +7,11 @@ type Status = 'initialising' | 'idle' | 'running' | 'complete'
 
 type TestMessage = Extract<SandpackMessage, { type: 'test' }>
 
+// A run request can arrive before the sandbox's test runner is listening, and
+// then it is dropped silently. Resend it until a run starts.
+const RETRY_MS = 8_000
+const MAX_ATTEMPTS = 5
+
 const ANSI = new RegExp(String.fromCharCode(27) + String.raw`\[[0-9;]*m`, 'g')
 const clean = (message: string | undefined) => (message ?? '').replace(ANSI, '').trim()
 
@@ -19,12 +24,21 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
   const { iframe, listen, getClient } = useSandpackClient()
   const [status, setStatus] = useState<Status>('initialising')
   const [summary, setSummary] = useState<RunSummary | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const run = useRef<{ tests: TestResult[]; fileErrors: string[] } | null>(null)
+  // True from a click until its run finishes; runs nobody asked for are ignored.
+  const awaiting = useRef(false)
+  const retryTimer = useRef<number | undefined>(undefined)
   const onCompleteRef = useRef(onComplete)
+  // Retries fire from timers, so they read the latest getClient through a ref.
+  const getClientRef = useRef(getClient)
 
   useEffect(() => {
     onCompleteRef.current = onComplete
-  }, [onComplete])
+    getClientRef.current = getClient
+  })
+
+  useEffect(() => () => window.clearTimeout(retryTimer.current), [])
 
   useEffect(() => {
     return listen((message) => {
@@ -39,8 +53,8 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
           setStatus((current) => (current === 'initialising' ? 'idle' : current))
           break
         case 'total_test_start':
-          run.current = { tests: [], fileErrors: [] }
-          setStatus('running')
+          window.clearTimeout(retryTimer.current)
+          run.current = awaiting.current ? { tests: [], fileErrors: [] } : null
           break
         case 'file_error':
           run.current?.fileErrors.push(`${event.path}: ${clean(event.error.message)}`)
@@ -59,6 +73,7 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
           const finished = run.current
           run.current = null
           if (!finished) break
+          awaiting.current = false
           const result = summarise(finished.tests, finished.fileErrors)
           setSummary(result)
           setStatus('complete')
@@ -69,11 +84,26 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
     })
   }, [listen])
 
+  const requestRun = (attempt: number) => {
+    const client = getClientRef.current()
+    if (client) client.dispatch({ type: 'run-all-tests' })
+    retryTimer.current = window.setTimeout(() => {
+      if (attempt < MAX_ATTEMPTS) {
+        requestRun(attempt + 1)
+      } else {
+        awaiting.current = false
+        setStatus('idle')
+        setNotice("The test runner didn't respond. Wait a moment and run the tests again.")
+      }
+    }, RETRY_MS)
+  }
+
   const runTests = () => {
-    const client = getClient()
-    if (!client) return
+    window.clearTimeout(retryTimer.current)
+    awaiting.current = true
+    setNotice(null)
     setStatus('running')
-    client.dispatch({ type: 'run-all-tests' })
+    requestRun(1)
   }
 
   const passCount = summary?.tests.filter((test) => test.status === 'pass').length ?? 0
@@ -102,7 +132,7 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
             : `${passCount} of ${summary.tests.length} tests passed.`
           : status === 'running'
             ? 'Running tests…'
-            : 'Run the tests when you are ready to check your work.'}
+            : (notice ?? 'Run the tests when you are ready to check your work.')}
       </div>
 
       {summary && summary.fileErrors.length > 0 && (

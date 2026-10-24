@@ -3,13 +3,16 @@ import {
   SandpackPreview,
   SandpackProvider,
   SandpackTests,
+  useSandpack,
 } from '@codesandbox/sandpack-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Diagnostic page: runs small Jest-style suites inside Sandpack's browser test
 // runner so CI can confirm which testing libraries work there. Each case is
 // selected with /_checks/sandpack?case=<name>; results are written to
-// [data-testid=result].
+// [data-testid=result] and the bundler messages seen to [data-testid=events].
+// Tests run only when the "Run tests" button is clicked: in watch mode a
+// second run can reset the results of one still finishing.
 
 type Case = {
   dependencies: Record<string, string>
@@ -51,8 +54,7 @@ const cases: Record<string, Case> = {
     dependencies: { ...REACT, ...RTL },
     files: {
       '/App.tsx': counterApp,
-      '/App.test.tsx': `import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+      '/App.test.tsx': `import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import App from "./App";
 
@@ -62,18 +64,16 @@ describe("rtl", () => {
     expect(screen.getByRole("heading", { name: "Counter" })).toBeInTheDocument();
   });
 
-  it("increments with user-event", async () => {
-    const user = userEvent.setup();
+  it("increments with fireEvent", () => {
     render(<App />);
-    await user.click(screen.getByRole("button", { name: "Increment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Increment" }));
     expect(screen.getByText("Count: 1")).toBeInTheDocument();
   });
 
-  it("types into a labelled input", async () => {
-    const user = userEvent.setup();
+  it("finds a labelled input and reacts to a change", async () => {
     render(<App />);
-    await user.type(screen.getByLabelText("Name"), "Ada");
-    expect(screen.getByText("Hello, Ada!")).toHaveTextContent("Ada");
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Ada" } });
+    expect(await screen.findByText("Hello, Ada!")).toHaveTextContent("Ada");
   });
 
   it("cleans up between tests", () => {
@@ -90,21 +90,27 @@ describe("rtl", () => {
 `,
     },
   },
-  'rtl-minimal': {
-    dependencies: {
-      ...REACT,
-      '@testing-library/react': '16.3.3',
-      '@testing-library/dom': '10.4.2',
-    },
+  'user-event': {
+    dependencies: { ...REACT, ...RTL },
     files: {
       '/App.tsx': counterApp,
-      '/App.test.tsx': `import { fireEvent, render, screen } from "@testing-library/react";
+      '/App.test.tsx': `import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom";
 import App from "./App";
 
-test("fireEvent and plain expect", () => {
+test("clicks with user-event", async () => {
+  const user = userEvent.setup();
   render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: "Increment" }));
-  expect(screen.getByText("Count: 1").textContent).toBe("Count: 1");
+  await user.click(screen.getByRole("button", { name: "Increment" }));
+  expect(screen.getByText("Count: 1")).toBeInTheDocument();
+});
+
+test("types with user-event", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.type(screen.getByLabelText("Name"), "Ada");
+  expect(screen.getByText("Hello, Ada!")).toBeInTheDocument();
 });
 `,
     },
@@ -188,18 +194,16 @@ export default function App({ url = "/" }: { url?: string }) {
   );
 }
 `,
-      '/App.test.tsx': `import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+      '/App.test.tsx': `import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import App, { routes } from "./App";
 
 test("data router: navigates with a link", async () => {
-  const user = userEvent.setup();
   const router = createMemoryRouter(routes, { initialEntries: ["/"] });
   render(<RouterProvider router={router} />);
   expect(screen.getByRole("heading", { name: "Home" })).toBeInTheDocument();
-  await user.click(screen.getByRole("link", { name: "Project 42" }));
+  fireEvent.click(screen.getByRole("link", { name: "Project 42" }));
   expect(await screen.findByRole("heading", { name: "Project 42" })).toBeInTheDocument();
 });
 
@@ -346,6 +350,21 @@ function summarise(specs: Record<string, SpecLike>): Summary {
   return summary
 }
 
+/** Records each distinct bundler message type (and test event) in arrival order. */
+function MessageLog() {
+  const { listen } = useSandpack()
+  const [seen, setSeen] = useState<string[]>([])
+  useEffect(
+    () =>
+      listen((message) => {
+        const name = 'event' in message ? `${message.type}:${String(message.event)}` : message.type
+        setSeen((current) => (current.includes(name) ? current : [...current, name]))
+      }),
+    [listen],
+  )
+  return <pre data-testid="events">{seen.join('\n')}</pre>
+}
+
 export function SandpackCheck() {
   const name = new URLSearchParams(window.location.search).get('case') ?? 'rtl'
   const current = cases[name]
@@ -369,10 +388,13 @@ export function SandpackCheck() {
           ) : (
             <SandpackTests
               verbose
+              watchMode={false}
+              showWatchButton={false}
               onComplete={(specs) => setResult(summarise(specs as unknown as Record<string, SpecLike>))}
             />
           )}
         </SandpackLayout>
+        <MessageLog />
       </SandpackProvider>
       {result && <pre data-testid="result">{JSON.stringify(result, null, 2)}</pre>}
     </main>
