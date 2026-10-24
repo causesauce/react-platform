@@ -55,6 +55,15 @@ describe('format problems are reported against the file to fix', () => {
     expect(exercises.map((ex) => ex.id)).not.toContain('foundations/site-header')
   })
 
+  test('tests may not import libraries that fail in the browser sandbox', () => {
+    const file = path.join(module(), 'exercises', '01-site-header', 'tests', 'App.test.tsx')
+    writeFileSync(file, 'import userEvent from "@testing-library/user-event";\nimport { http } from "msw";\n')
+    expect(messagesFor(file)).toEqual([
+      "imports @testing-library/user-event, which doesn't run in the browser sandbox (see CONTRIBUTING.md)",
+      "imports msw, which doesn't run in the browser sandbox (see CONTRIBUTING.md)",
+    ])
+  })
+
   test('a module needs enough exercises', () => {
     const exercises = path.join(module(), 'exercises')
     for (const name of ['02-team-cards', '03-order-summary', '04-reading-list']) {

@@ -9,7 +9,7 @@ type TestMessage = Extract<SandpackMessage, { type: 'test' }>
 
 // A run request can arrive before the sandbox's test runner is listening, and
 // then it is dropped silently. Resend it until a run starts.
-const RETRY_MS = 8_000
+const RETRY_MS = 15_000
 const MAX_ATTEMPTS = 5
 
 const ANSI = new RegExp(String.fromCharCode(27) + String.raw`\[[0-9;]*m`, 'g')
@@ -25,7 +25,9 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
   const [status, setStatus] = useState<Status>('initialising')
   const [summary, setSummary] = useState<RunSummary | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const run = useRef<{ tests: TestResult[]; fileErrors: string[] } | null>(null)
+  // Keyed by file, describe blocks and name: if a resend overlaps a slow first
+  // run, both report each test, and it must only count once.
+  const run = useRef<{ tests: Map<string, TestResult>; fileErrors: Set<string> } | null>(null)
   // True from a click until its run finishes; runs nobody asked for are ignored.
   const awaiting = useRef(false)
   const retryTimer = useRef<number | undefined>(undefined)
@@ -54,14 +56,14 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
           break
         case 'total_test_start':
           window.clearTimeout(retryTimer.current)
-          run.current = awaiting.current ? { tests: [], fileErrors: [] } : null
+          run.current = awaiting.current ? { tests: new Map(), fileErrors: new Set() } : null
           break
         case 'file_error':
-          run.current?.fileErrors.push(`${event.path}: ${clean(event.error.message)}`)
+          run.current?.fileErrors.add(`${event.path}: ${clean(event.error.message)}`)
           break
         case 'test_end':
           if (event.test.status === 'pass' || event.test.status === 'fail') {
-            run.current?.tests.push({
+            run.current?.tests.set([event.test.path, ...event.test.blocks, event.test.name].join('\u0000'), {
               name: event.test.name,
               blocks: event.test.blocks,
               status: event.test.status,
@@ -74,7 +76,7 @@ export function TestRunner({ onComplete }: { onComplete: (summary: RunSummary) =
           run.current = null
           if (!finished) break
           awaiting.current = false
-          const result = summarise(finished.tests, finished.fileErrors)
+          const result = summarise([...finished.tests.values()], [...finished.fileErrors])
           setSummary(result)
           setStatus('complete')
           onCompleteRef.current(result)

@@ -32,7 +32,7 @@ test('rtl: React Testing Library, fireEvent and jest-dom', async ({ page }) => {
   expect(summary.tests).toHaveLength(5)
 })
 
-for (const name of ['user-event', 'ts-syntax', 'router', 'query']) {
+for (const name of ['ts-syntax', 'router', 'query']) {
   test(`${name}: all tests pass`, async ({ page }) => {
     const summary = await runCase(page, name)
     expect(summary.fileErrors).toEqual([])
@@ -51,6 +51,18 @@ for (const name of ['msw', 'msw-v2']) {
     expect(summary.fileErrors.join('\n')).toMatch(/Class private methods are not enabled/)
   })
 }
+
+// Known incompatibility, found by this check on 2026-10-24: user-event 14
+// fails with jsdom's "not of type 'Element'" error in Sandpack's runner, so
+// exercise tests use fireEvent. If this starts failing, user-event works.
+test('user-event: fails in Sandpack (known incompatibility)', async ({ page }) => {
+  const summary = await runCase(page, 'user-event')
+  expect(summary.tests.length).toBeGreaterThan(0)
+  for (const t of summary.tests) {
+    expect(t.status).toBe('fail')
+    expect(t.error).toMatch(/not of type 'Element'/)
+  }
+})
 
 test('preview: renders the app in the preview iframe', async ({ page }) => {
   await page.goto('/_checks/sandpack?case=preview')

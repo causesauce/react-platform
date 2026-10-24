@@ -24,6 +24,9 @@ export type ExerciseInfo = {
 const MODULE_ENTRIES = new Set(['module.json', 'capstone.md', 'exercises'])
 const EXERCISE_ENTRIES = new Set(['meta.json', 'starter', 'solution', 'tests', 'explanation.md'])
 const SOURCE_FILE = /\.(tsx?|css|json)$/
+// Both fail in Sandpack's runner (see e2e/sandpack-check.spec.ts), so tests
+// using them would pass validation and then fail for the learner.
+const UNSUPPORTED_IN_SANDPACK = ['@testing-library/user-event', 'msw']
 
 const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory()
 const list = (dir: string) => readdirSync(dir).filter((name) => !name.startsWith('.')).sort()
@@ -176,6 +179,15 @@ export function checkContent(contentDir: string, only: string[] = []): { problem
       }
       for (const file of tests) {
         if (path.dirname(file) !== '.') report(path.join(testsDir, file), 'test files sit directly in tests/')
+      }
+      for (const file of [...starter.map((f) => path.join(starterDir, f)), ...solution.map((f) => path.join(solutionDir, f)), ...tests.map((f) => path.join(testsDir, f))]) {
+        if (!/\.tsx?$/.test(file)) continue
+        const source = readFileSync(file, 'utf8')
+        for (const name of UNSUPPORTED_IN_SANDPACK) {
+          if (new RegExp(`from\\s+["']${name}(/[^"']*)?["']`).test(source)) {
+            report(file, `imports ${name}, which doesn't run in the browser sandbox (see CONTRIBUTING.md)`)
+          }
+        }
       }
       if (!starter.some((file) => readFileSync(path.join(starterDir, file), 'utf8').includes('TODO'))) {
         report(starterDir, 'starter code needs // TODO markers showing what to change')

@@ -142,8 +142,7 @@ Each exercise is a small app the learner finishes. Its hidden tests check what t
 - Use the Jest-style globals `describe`, `test`/`it` and `expect` **without importing them**, and import everything else explicitly:
 
   ```tsx
-  import { render, screen, within } from "@testing-library/react";
-  import userEvent from "@testing-library/user-event";
+  import { fireEvent, render, screen, within } from "@testing-library/react";
   import "@testing-library/jest-dom";
   import App, { OrderSummary } from "./App";
   ```
@@ -151,7 +150,8 @@ Each exercise is a small app the learner finishes. Its hidden tests check what t
 - **Don't use `vi.*` or `jest.*`** (mocks, spies, fake timers). Each exists in only one of the two runners. Pass plain functions as props instead of mocks. To check console output, swap `console.error` by hand and restore it in `finally`, as Module 1's reading-list test does.
 - Query the way a user finds things: `getByRole` with a `name`, `getByLabelText`, `getByText`. Avoid `container.querySelector`, test IDs and class names.
 - Test behaviour that any reasonable solution shares. Render the component with **different data** from `App`'s, so a hard-coded answer fails.
-- Use `findBy…` (or `await user.…`) for anything asynchronous, never fixed sleeps.
+- Simulate interaction with `fireEvent` (`fireEvent.click`, `fireEvent.change(input, { target: { value: "…" } })`). **`@testing-library/user-event` doesn't work in Sandpack's runner**: every call fails with jsdom's "not of type 'Element'" error. The validator rejects test files that import it.
+- Use `findBy…` for anything asynchronous, never fixed sleeps.
 
 ### explanation.md
 
@@ -159,13 +159,13 @@ A few short paragraphs on why the solution is written the way it is: the decisio
 
 ### Packages exercises may use
 
-Every sandbox gets `react`, `react-dom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event` and `@testing-library/jest-dom`. An exercise may add any of these through `meta.json` `dependencies`:
+Every sandbox gets `react`, `react-dom`, `@testing-library/react`, `@testing-library/dom` and `@testing-library/jest-dom`. An exercise may add any of these through `meta.json` `dependencies`:
 
 `react-router`, `@tanstack/react-query`, `react-hook-form`, `zod`, `@hookform/resolvers`, `zustand`, `@reduxjs/toolkit`, `react-redux`
 
 Each is pinned to an exact version in `package.json`, so the browser sandbox downloads the same version that validation runs locally. The list lives in `src/content/schema.ts`.
 
-CI's `sandpack` job checks which libraries work in Sandpack's runner (see `/_checks/sandpack`).
+CI's `sandpack` job checks which libraries work in Sandpack's runner (see `/_checks/sandpack`). React Router (declarative and data routers) and TanStack Query are confirmed to work.
 
 - **MSW does not work there.** MSW 2 and 3 use ES private methods (`#method`), which Sandpack's Babel setup can't compile, so `msw` is not on the list. MSW exercises (modules 5 and 11) need the brief's fallback: local Vitest projects in an `exercises/` folder. That folder doesn't exist yet. Write the rest of the module and describe the MSW exercises you'd add in the PR.
 - If another library fails there, the same fallback applies. Raise it in your PR rather than inventing a workaround.
